@@ -8,17 +8,41 @@ on:
 jobs:
   sonar_scan:
     runs-on: ubuntu-latest
+
+    services:
+      sonarqube:
+        image: sonarqube:latest
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Java (SonarQube Scanner)
+      - name: Wait for SonarQube to be ready
+        run: |
+          echo "Aguardando SonarQube inicializar..."
+          for i in {1..30}; do
+            if curl -s http://localhost:9000/api/system/health | grep -q '"status":"GREEN"'; then
+              echo "SonarQube está pronto!"
+              break
+            fi
+            echo "Ainda não: tentativa $i"
+            sleep 10
+          done
+
+      - name: Set up Java (SonarScanner)
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '11'
 
-      - name: Cache SonarQube Scanner
+      - name: Cache SonarScanner
         uses: actions/cache@v3
         with:
           path: ~/.sonar/cache
@@ -33,7 +57,7 @@ jobs:
 
       - name: Run SonarQube analysis
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_HOST_URL: http://localhost:9000
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
@@ -44,10 +68,9 @@ jobs:
 
       - name: Quality Gate Check
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_HOST_URL: http://localhost:9000
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # Consulta o status do Quality Gate e falha se não for OK
           STATUS="$(curl -s -u "${SONAR_TOKEN}:" \
             "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=edu-api" \
             | jq -r .projectStatus.status)"
