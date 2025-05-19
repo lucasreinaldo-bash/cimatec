@@ -1,0 +1,55 @@
+name: SAST with SonarQube
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+
+jobs:
+  sonar_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java (SonarQube Scanner)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Cache SonarQube Scanner
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+
+      - name: Install SonarQube Scanner CLI
+        run: |
+          curl -sSLo sonar-scanner.zip \
+            https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+          unzip sonar-scanner.zip
+          echo "::add-path::${{ github.workspace }}/sonar-scanner-4.7.0.2747-linux/bin"
+
+      - name: Run SonarQube analysis
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=edu-api \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.login=${SONAR_TOKEN}
+
+      - name: Quality Gate Check
+        run: |
+          # Aguarda até o Quality Gate ser calculado e falha se não passar
+          STATUS="$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=edu-api" \
+            | jq -r .projectStatus.status)"
+          echo "Quality Gate status: $STATUS"
+          if [ "$STATUS" != "OK" ]; then
+            echo "🚨 Quality Gate failed"
+            exit 1
+          fi
