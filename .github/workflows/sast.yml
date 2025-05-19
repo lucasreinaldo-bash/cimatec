@@ -15,7 +15,7 @@ jobs:
       - name: Set up Java (SonarQube Scanner)
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '11'
 
       - name: Cache SonarQube Scanner
@@ -29,7 +29,7 @@ jobs:
           curl -sSLo sonar-scanner.zip \
             https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
           unzip sonar-scanner.zip
-          echo "::add-path::${{ github.workspace }}/sonar-scanner-4.7.0.2747-linux/bin"
+          echo "${{ github.workspace }}/sonar-scanner-4.7.0.2747-linux/bin" >> $GITHUB_PATH
 
       - name: Run SonarQube analysis
         env:
@@ -43,10 +43,13 @@ jobs:
             -Dsonar.login=${SONAR_TOKEN}
 
       - name: Quality Gate Check
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # Aguarda até o Quality Gate ser calculado e falha se não passar
-          STATUS="$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
-            "${{ secrets.SONAR_HOST_URL }}/api/qualitygates/project_status?projectKey=edu-api" \
+          # Consulta o status do Quality Gate e falha se não for OK
+          STATUS="$(curl -s -u "${SONAR_TOKEN}:" \
+            "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=edu-api" \
             | jq -r .projectStatus.status)"
           echo "Quality Gate status: $STATUS"
           if [ "$STATUS" != "OK" ]; then
