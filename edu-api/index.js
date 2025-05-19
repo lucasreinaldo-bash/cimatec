@@ -37,7 +37,7 @@ app.use((err, req, res, next) => {
 });
 
 // index.js — antes de proteção, no endpoint /users
-app.get('/users', (req, res) => {
+app.get('/user', (req, res) => {
   const unsafe = req.query.filter || '';
   // Código vulnerável: concatenação de string para SQL
   db.query("SELECT * FROM users WHERE name LIKE '%" + unsafe + "%';", (err, rows) => {
