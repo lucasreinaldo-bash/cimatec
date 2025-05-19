@@ -36,6 +36,16 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// index.js — antes de proteção, no endpoint /users
+app.get('/users', (req, res) => {
+  const unsafe = req.query.filter || '';
+  // Código vulnerável: concatenação de string para SQL
+  db.query("SELECT * FROM users WHERE name LIKE '%" + unsafe + "%';", (err, rows) => {
+    res.json(rows);
+  });
+});
+
+
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`EduLearn User Service rodando na porta ${PORT}`));
