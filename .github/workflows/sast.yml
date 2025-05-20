@@ -1,10 +1,3 @@
-name: SAST with SonarQube
-
-on:
-  push:
-    branches: [ "**" ]
-  pull_request:
-
 jobs:
   sonar_scan:
     runs-on: ubuntu-latest
@@ -15,28 +8,30 @@ jobs:
         ports:
           - 9000:9000
         options: >-
-          --health-cmd "curl -f http://localhost:9000 || exit 1"
+          --health-cmd "curl -f http://localhost:9000/api/system/health || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      # a chave aqui é usar o hostname 'sonarqube' (nome do serviço), não 'localhost'
+      SONAR_HOST_URL: http://sonarqube:9000
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Wait for SonarQube to be ready
         run: |
-          echo "Aguardando SonarQube inicializar..."
           for i in {1..30}; do
-            if curl -s http://localhost:9000/api/system/health | grep -q '"status":"GREEN"'; then
+            if curl -s http://sonarqube:9000/api/system/health | grep -q '"status":"GREEN"'; then
               echo "SonarQube está pronto!"
               break
             fi
-            echo "Ainda não: tentativa $i"
+            echo "Aguardando SonarQube... tentativa $i"
             sleep 10
           done
 
-      - name: Set up Java (SonarScanner)
+      - name: Set up Java
         uses: actions/setup-java@v3
         with:
           distribution: temurin
@@ -48,8 +43,9 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
 
-      - name: Install SonarQube Scanner CLI
+      - name: Install jq and SonarQube Scanner CLI
         run: |
+          sudo apt-get update && sudo apt-get install -y jq
           curl -sSLo sonar-scanner.zip \
             https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
           unzip sonar-scanner.zip
@@ -57,18 +53,17 @@ jobs:
 
       - name: Run SonarQube analysis
         env:
-          SONAR_HOST_URL: http://localhost:9000
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
             -Dsonar.projectKey=edu-api \
             -Dsonar.sources=. \
             -Dsonar.host.url=${SONAR_HOST_URL} \
-            -Dsonar.login=${SONAR_TOKEN}
+            -Dsonar.login=${SONAR_TOKEN} \
+            -Djava.net.preferIPv4Stack=true
 
       - name: Quality Gate Check
         env:
-          SONAR_HOST_URL: http://localhost:9000
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           STATUS="$(curl -s -u "${SONAR_TOKEN}:" \
