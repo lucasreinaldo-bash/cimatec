@@ -1,4 +1,4 @@
-name: SAST com SonarCloud
+name: SAST com SonarCloud (CLI)
 
 on:
   push:
@@ -27,13 +27,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: SAST – SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+      - name: Install SonarScanner CLI
+        run: |
+          curl -sSLo sonar-scanner-cli.zip \
+            https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+          unzip sonar-scanner-cli.zip
+          echo "${{ github.workspace }}/sonar-scanner-4.7.0-2747-linux/bin" >> $GITHUB_PATH
+
+      - name: Create sonar-project.properties
+        run: |
+          cat <<EOF > sonar-project.properties
+          sonar.projectKey=lucasreinaldo-bash_edu-api
+          sonar.organization=lucasreinaldo-bash
+          sonar.host.url=https://sonarcloud.io
+          sonar.sources=.
+          EOF
+
+      - name: Run SonarScanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: |
-            -Dsonar.organization=lucasreinaldo-bash
-            -Dsonar.projectKey=lucasreinaldo-bash_edu-api
-            -Dsonar.login=${{ env.SONAR_TOKEN }}
-            -Dsonar.host.url=https://sonarcloud.io
+        run: |
+          sonar-scanner \
+            -Dsonar.login=${SONAR_TOKEN} \
+            -Djava.net.preferIPv4Stack=true
