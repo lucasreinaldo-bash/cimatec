@@ -29,10 +29,13 @@ jobs:
 
       - name: Install SonarScanner CLI
         run: |
-          curl -sSLo sonar-scanner-cli.zip \
-            https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
-          unzip sonar-scanner-cli.zip
-          echo "${{ github.workspace }}/sonar-scanner-4.7.0-2747-linux/bin" >> $GITHUB_PATH
+          SCANNER_ZIP=sonar-scanner-cli-4.7.0.2747-linux.zip
+          curl -sSLo $SCANNER_ZIP \
+            https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/4.7.0.2747/$SCANNER_ZIP
+          unzip -q $SCANNER_ZIP
+          # assume the unzip created a single folder matching pattern sonar-scanner-*-linux
+          SCANNER_DIR=$(ls -d sonar-scanner-*-linux)
+          echo "$PWD/$SCANNER_DIR/bin" >> $GITHUB_PATH
 
       - name: Create sonar-project.properties
         run: |
@@ -47,6 +50,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          # verifica se o scanner está no PATH
+          which sonar-scanner
           sonar-scanner \
             -Dsonar.login=${SONAR_TOKEN} \
             -Djava.net.preferIPv4Stack=true
