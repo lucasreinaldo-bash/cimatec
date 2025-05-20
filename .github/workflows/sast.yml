@@ -56,11 +56,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
+            -Dsonar.host.url=http://sonarqube:9000 \
+            -Dsonar.login=${SONAR_TOKEN} \
             -Dsonar.projectKey=edu-api \
             -Dsonar.sources=. \
-            -Dsonar.host.url=${SONAR_HOST_URL} \
-            -Dsonar.login=${SONAR_TOKEN} \
             -Djava.net.preferIPv4Stack=true
+
 
       - name: Quality Gate Check
         env:
