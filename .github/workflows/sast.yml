@@ -1,3 +1,10 @@
+name: SAST with SonarQube
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+
 jobs:
   sonar_scan:
     runs-on: ubuntu-latest
@@ -14,24 +21,25 @@ jobs:
           --health-retries 5
 
     env:
-      # a chave aqui é usar o hostname 'sonarqube' (nome do serviço), não 'localhost'
       SONAR_HOST_URL: http://sonarqube:9000
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Wait for SonarQube to be ready
         run: |
+          echo "Aguardando SonarQube inicializar..."
           for i in {1..30}; do
-            if curl -s http://sonarqube:9000/api/system/health | grep -q '"status":"GREEN"'; then
+            if curl -s ${SONAR_HOST_URL}/api/system/health | grep -q '"status":"GREEN"'; then
               echo "SonarQube está pronto!"
               break
             fi
-            echo "Aguardando SonarQube... tentativa $i"
+            echo "Ainda não: tentativa $i"
             sleep 10
           done
 
-      - name: Set up Java
+      - name: Set up Java (SonarScanner)
         uses: actions/setup-java@v3
         with:
           distribution: temurin
@@ -49,26 +57,22 @@ jobs:
           curl -sSLo sonar-scanner.zip \
             https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
           unzip sonar-scanner.zip
-          echo "${{ github.workspace }}/sonar-scanner-4.7.0.2747-linux/bin" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/sonar-scanner-4.7.0-*-linux/bin" >> $GITHUB_PATH
 
       - name: Run SonarQube analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
-            -Dsonar.host.url=http://sonarqube:9000 \
             -Dsonar.login=${SONAR_TOKEN} \
-            -Dsonar.projectKey=edu-api \
-            -Dsonar.sources=. \
             -Djava.net.preferIPv4Stack=true
-
 
       - name: Quality Gate Check
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           STATUS="$(curl -s -u "${SONAR_TOKEN}:" \
-            "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=edu-api" \
+            "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=cimatec" \
             | jq -r .projectStatus.status)"
           echo "Quality Gate status: $STATUS"
           if [ "$STATUS" != "OK" ]; then
