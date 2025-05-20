@@ -32,9 +32,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          # não é necessário projectBaseDir, pois estamos na raiz
           args: |
-            -Dsonar.organization=${{ secrets.SONAR_ORG }}
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT }}
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.organization=lucasreinaldo-bash
+            -Dsonar.projectKey=lucasreinaldo-bash_edu-api
+            -Dsonar.login=b1604021217df1bd73cdbe454f6df7964bbce943
             -Dsonar.host.url=https://sonarcloud.io
