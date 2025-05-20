@@ -35,5 +35,5 @@ jobs:
           args: |
             -Dsonar.organization=lucasreinaldo-bash
             -Dsonar.projectKey=lucasreinaldo-bash_edu-api
-            -Dsonar.login=b1604021217df1bd73cdbe454f6df7964bbce943
+            -Dsonar.login=${{ env.SONAR_TOKEN }}
             -Dsonar.host.url=https://sonarcloud.io
