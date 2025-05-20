@@ -1,4 +1,4 @@
-name: SAST com SonarCloud (CLI)
+name: SAST com SonarCloud
 
 on:
   push:
@@ -10,48 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) baixa o código
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2) configura Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-
+      # 3) instalando dependências
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Install SonarScanner CLI
-        run: |
-          SCANNER_ZIP=sonar-scanner-cli-4.7.0.2747-linux.zip
-          curl -sSLo $SCANNER_ZIP \
-            https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/4.7.0.2747/$SCANNER_ZIP
-          unzip -q $SCANNER_ZIP
-          # assume the unzip created a single folder matching pattern sonar-scanner-*-linux
-          SCANNER_DIR=$(ls -d sonar-scanner-*-linux)
-          echo "$PWD/$SCANNER_DIR/bin" >> $GITHUB_PATH
-
-      - name: Create sonar-project.properties
-        run: |
-          cat <<EOF > sonar-project.properties
-          sonar.projectKey=lucasreinaldo-bash_edu-api
-          sonar.organization=lucasreinaldo-bash
-          sonar.host.url=https://sonarcloud.io
-          sonar.sources=.
-          EOF
-
-      - name: Run SonarScanner
+      # 4) roda a análise no SonarCloud
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # verifica se o scanner está no PATH
-          which sonar-scanner
-          sonar-scanner \
-            -Dsonar.login=${SONAR_TOKEN} \
-            -Djava.net.preferIPv4Stack=true
+        with:
+          # tudo via args — nada de inputs inesperados
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORG }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.host.url=https://sonarcloud.io
