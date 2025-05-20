@@ -8,6 +8,7 @@ on:
 jobs:
   sonarcloud:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -25,10 +26,17 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: edu-api/edu-api
 
       - name: Run SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@v1
         with:
-          organization: ${{ secrets.SONAR_ORG }}
-          projectKey:   ${{ secrets.SONAR_PROJECT }}
-          token:        ${{ secrets.SONAR_TOKEN }}
+          args: |
+            -Dsonar.organization=${{ secrets.SONAR_ORG }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORG }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT }}
+        working-directory: edu-api/edu-api
